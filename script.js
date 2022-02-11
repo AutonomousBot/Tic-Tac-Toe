@@ -41,6 +41,7 @@ let currentPlayer = ""
 let player1 = {}
 let player2 = {}
 
+// Initializes players, turns and board for 2-persons play.
 function twoPlayerGame() {
   // Prompts for players' names and their marks.
   let player1Name = prompt("Enter player one's name (special characters excluded).")
@@ -70,19 +71,22 @@ function twoPlayerGame() {
 // Determines who plays first and turn order. Updates current player variable.
 let turn = (() => {
   const displayTurn = () => {
+    // Checks if player1 is registered.
     if (!(Object.keys(player1).length === 0)) {
       const turnDOM = document.getElementById("playerTurn")
       for(let i = 0; i < gameBoard.length; i++) {
-        if (player1.markedBoard.length == 0 && player2.markedBoard.length == 0)
+        // Checks if board is empty.
+        if (gameBoard.board.length === 0)
         {
           // Randomizes first player.
           let first = Math.floor(Math.random() * 2) + 1;
-          (first == 1)? currentPlayer = player1 : currentPlayer = player2
+          if (first == 1) { currentPlayer = player1 } else { currentPlayer = player2 }
           turnDOM.textContent = `${currentPlayer.getName()} will go first`
         }
+        // Regular turns.
         else {
-          currentPlayer == player1? currentPlayer = player2 : currentPlayer = player1
-          turnDOM.textContent = `${currentPlayer.getName()} will go first`
+          if (currentPlayer == player1) { currentPlayer = player2 } else { currentPlayer = player1 }
+          turnDOM.textContent = `${currentPlayer.getName()}'s turn`
         }
       }
     }
