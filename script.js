@@ -8,17 +8,36 @@ let gameBoard = (() => {
     for (let i = 0; i < length; i++) {
       const square = document.createElement("div");   
       square.setAttribute("class", "square");
+      square.setAttribute("id", `${i}`);
       square.style.setProperty("flex-basis", `${100/3}%`)
       boardDOM.appendChild(square);   
     }
-    return;
+  }
+  // Check if no more mjoves are possible.
+  const checkNull = () => {
+    for (let i = 0; i < length; i++) {
+      if (board[i] == null) { return true }
+    }
+    return false
+  }
+  // Adds click event to grids of the board.
+  const addGridClick = () => {
+    for (let i = 0; i < length; i++) {
+      const gridDOM = document.getElementById(`${i}`)
+      gridDOM.addEventListener("click", addMark, false)
+    }
   }
   return {
     board,
     length,
-    displayBoard
+    displayBoard,
+    addGridClick,
+    checkNull
   }  
 })()
+
+// Stores winning arrays.
+const winningArrays = [[0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,4,8], [2,4,6]]
 
 // Displays the board.
 gameBoard.displayBoard()
@@ -65,15 +84,18 @@ function twoPlayerGame() {
   player1 = Player(player1Name, player1Mark)
   player2 = Player(player2Name, player2Mark)
 
+  // Displays turn.
   turn.displayTurn();
+  // Calls for gameBoard.addGridClick.
+  gameBoard.addGridClick();
 }
 
 // Determines who plays first and turn order. Updates current player variable.
 let turn = (() => {
+  const turnDOM = document.getElementById("playerTurn")
   const displayTurn = () => {
     // Checks if player1 is registered.
     if (!(Object.keys(player1).length === 0)) {
-      const turnDOM = document.getElementById("playerTurn")
       for(let i = 0; i < gameBoard.length; i++) {
         // Checks if board is empty.
         if (gameBoard.board.length === 0)
@@ -83,15 +105,15 @@ let turn = (() => {
           if (first == 1) { currentPlayer = player1 } else { currentPlayer = player2 }
           turnDOM.textContent = `${currentPlayer.getName()} will go first`
         }
-        // Regular turns.
-        else {
-          if (currentPlayer == player1) { currentPlayer = player2 } else { currentPlayer = player1 }
-          turnDOM.textContent = `${currentPlayer.getName()}'s turn`
-        }
       }
     }
   }
-  return {currentPlayer, displayTurn}
+  const current = () => {
+    // Regular turns.
+    if (currentPlayer == player1) { currentPlayer = player2 } else { currentPlayer = player1 }
+    turnDOM.textContent = `${currentPlayer.getName()}'s turn`
+  }
+  return {currentPlayer, displayTurn, current}
 })()
 
 // 
@@ -101,10 +123,29 @@ function addMark() {
   if (this.textContent == "") {
     const grid = this.id
     // Updates board in gameBoard module
-    gameBoard.board[grid] = currentPlayer.mark
+    gameBoard.board[grid] = currentPlayer.getMark()
     // Updates board DOM element.
-    document.getElementById(`{grid}`).textContent = currentPlayer.mark
+    this.textContent = `${currentPlayer.getMark()}`
     currentPlayer.markedBoard.push(grid)
+    // Checks for winner.
+    checkWinner();
+    // Displays who plays next turn.
+    turn.current()
+  }
+}
+
+function checkWinner() {
+  for (let i = 0; i < 8; i++) {
+    const youWin = winningArrays[i].every(element => {
+      return currentPlayer.markedBoard.sort().includes(String(element));
+    })
+    if (youWin) {
+      alert(`${currentPlayer.getName()} wins!`)
+      break
+    }
+    // if (i == 7 && !(youWin) && !(gameBoard.checkNull())) {
+    //   alert(`{Tie! Nobody wins!}`)
+    // }
   }
 }
 

@@ -21,6 +21,10 @@ body {
   border: 2px solid black;
   /* Calculates height/width with border. */
   box-sizing: border-box;
+  text-align: justify;
+  overflow: hidden;
+  max-width: 134px;
+  max-height: 134px;
 }
 
 /* Make grid have a max width of 960px and add margins. */
