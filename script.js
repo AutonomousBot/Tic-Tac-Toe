@@ -1,6 +1,8 @@
 // Module for the board data. Creates board DOM element.
 let gameBoard = (() => {
   let board = [];
+  // Check if game is solo.
+  let AIonline = false;
   const length = 9;
   const displayBoard = () => {
     // Creates a DOM element for every square of the board.
@@ -12,13 +14,6 @@ let gameBoard = (() => {
       square.style.setProperty("flex-basis", `${100/3}%`)
       boardDOM.appendChild(square);   
     }
-  }
-  // Check if no more mjoves are possible.
-  const checkNull = () => {
-    for (let i = 0; i < length; i++) {
-      if (board[i] == null) { return true }
-    }
-    return false
   }
   // Adds click event to grids of the board.
   const addGridClick = () => {
@@ -32,7 +27,7 @@ let gameBoard = (() => {
     length,
     displayBoard,
     addGridClick,
-    checkNull
+    AIonline
   }  
 })()
 
@@ -42,6 +37,69 @@ const winningArrays = [[0,1,2], [3,4,5], [6,7,8], [0,3,6], [1,4,7], [2,5,8], [0,
 // Displays the board.
 gameBoard.displayBoard()
 
+// Functions that remove click events and resets the game.
+let reset = (() => {
+  // Removes click events from player selection when match is in progress.
+  const playerSettings = () => {
+    // document.getElementById("1player").removeEventListener("click")
+    document.getElementById("2players").removeEventListener("click", twoPlayerGame, false)
+  }
+  // Resets players and turns.
+  const players = () => {
+    player1 = {}
+    player2 = {}
+    currentPlayer = ""
+    // Removes turn/winner messages.
+    turn.DOM = ""
+  }
+  // Resets board.
+  const board = () => {
+    gameBoard.board = []
+    for (let i = 0; i < gameBoard.length; i++) {
+      document.getElementById(`${i}`).removeEventListener("click", addMark, false)
+    }
+  }
+
+  // Restores player settings.
+  const restoreSettings = () => {
+    // Adds event to twoPlayers button. Calls twoPlayerGame.
+    const twoPlayers = document.getElementById("2players")
+    twoPlayers.addEventListener("click", twoPlayerGame, false)
+    // Adds event to onePlayer button. Calls soloGame.
+    const onePlayer = document.getElementById("1player")
+    onePlayer.addEventListener("click", soloGame, false)
+  }
+
+  // Removes click events from board when match is over.
+  const grid = () => {
+    for (let i = 0; i < length; i++) {
+      const gridDOM = document.getElementById(`${i}`)
+      gridDOM.removeEventListener("click", addMark, false)
+    }
+  }
+
+  // Resets game after a match.
+  const game = () => {
+    players();
+    board();
+    restoreSettings();
+    gameBoard.AIonline = false
+    gameBoard.addGridClick()
+  }
+
+  // Adds click even to restart button. Calls reset.game.
+  document.getElementById("restart").addEventListener("click", game, false)
+
+  return {
+    playerSettings,
+    restoreSettings,
+    grid
+  }
+})()
+
+// Allows for player options.
+reset.restoreSettings()
+
 // Factory for players.
 const Player = (name, mark) => {
   let markedBoard = []
@@ -50,15 +108,38 @@ const Player = (name, mark) => {
   return {markedBoard, getMark, getName}
 }
 
-// Adds event to twoPlayers button. Calls twoPlayerGame.
-const twoPlayers = document.getElementById("2players")
-twoPlayers.addEventListener("click", twoPlayerGame, false)
-
 // Declare global current player.
 let currentPlayer = ""
 // Declare players
 let player1 = {}
 let player2 = {}
+
+// Initializes players, turns and board for solo play.
+function soloGame() {
+  gameBoard.AIonline = true;
+  // Prompts for players' names and their marks.
+  let player1Name = prompt("Enter player one's name (special characters excluded).")
+  while (player1Name == "" || !isAlphaNumeric(player1Name)) {
+    player1Name = prompt("Enter player one's name (special characters excluded).")
+  }
+
+  let player1Mark = prompt("Would you like to be X or O?").toUpperCase()
+  while (player1Mark != "X" && player1Mark != "O") {
+    player1Mark = prompt("Would you like to be X or O?").toUpperCase()
+  }
+
+  let player2Name = "The Computer"
+  let player2Mark = ""
+  player2Mark = (player1Mark == "X")? "O" : "X"; 
+
+  player1 = Player(player1Name, player1Mark)
+  player2 = Player(player2Name, player2Mark)
+
+  // Calls for gameBoard.addGridClick.
+  gameBoard.addGridClick();
+  // Displays turn.
+  turn.displayTurn();
+}
 
 // Initializes players, turns and board for 2-persons play.
 function twoPlayerGame() {
@@ -79,20 +160,24 @@ function twoPlayerGame() {
     player2Name = prompt("Enter player two's name (special characters excluded).")
   }
   let player2Mark = ""
-  player1Mark == "X"? player2Mark = "O" : player2Mark = "X"; 
+  player2Mark = (player1Mark == "X")? "O" : "X"; 
 
   player1 = Player(player1Name, player1Mark)
   player2 = Player(player2Name, player2Mark)
 
-  // Displays turn.
-  turn.displayTurn();
   // Calls for gameBoard.addGridClick.
   gameBoard.addGridClick();
+
+  // Displays turn.
+  turn.displayTurn();
+
+  // Removes player options while game is in progress.
+  reset.playerSettings()
 }
 
 // Determines who plays first and turn order. Updates current player variable.
 let turn = (() => {
-  const turnDOM = document.getElementById("playerTurn")
+  const DOM = document.getElementById("playerTurn")
   const displayTurn = () => {
     // Checks if player1 is registered.
     if (!(Object.keys(player1).length === 0)) {
@@ -103,17 +188,41 @@ let turn = (() => {
           // Randomizes first player.
           let first = Math.floor(Math.random() * 2) + 1;
           if (first == 1) { currentPlayer = player1 } else { currentPlayer = player2 }
-          turnDOM.textContent = `${currentPlayer.getName()} will go first`
+          DOM.textContent = `${currentPlayer.getName()} will go first`
+          if (gameBoard.AIonline && currentPlayer == player2) {
+            AIturn();
+          }
         }
       }
     }
   }
   const current = () => {
     // Regular turns.
-    if (currentPlayer == player1) { currentPlayer = player2 } else { currentPlayer = player1 }
-    turnDOM.textContent = `${currentPlayer.getName()}'s turn`
+    // Checks for winner.
+    // An endstate of the board is reached.
+    let results = checkWinner()
+    if (results != undefined) {
+      if (Math.abs(results) == 1) {
+        turn.DOM.textContent = `${currentPlayer.getName()} wins!`
+        reset.grid()
+        return
+      }
+      else {turn.DOM.textContent = "Tie! Nobody wins!"}
+      reset.grid()
+      return
+    }
+    if (currentPlayer == player1) { 
+      currentPlayer = player2 
+      if (gameBoard.AIonline) {
+        AIturn();
+      }
+    } 
+    else {
+     currentPlayer = player1 
+    }
+    DOM.textContent = `${currentPlayer.getName()}'s turn`
   }
-  return {currentPlayer, displayTurn, current}
+  return {currentPlayer, displayTurn, current, DOM}
 })()
 
 // 
@@ -127,27 +236,29 @@ function addMark() {
     // Updates board DOM element.
     this.textContent = `${currentPlayer.getMark()}`
     currentPlayer.markedBoard.push(grid)
-    // Checks for winner.
-    checkWinner();
     // Displays who plays next turn.
     turn.current()
   }
 }
 
+// Check for winner or a tie.
 function checkWinner() {
   for (let i = 0; i < 8; i++) {
     const youWin = winningArrays[i].every(element => {
       return currentPlayer.markedBoard.sort().includes(String(element));
     })
     if (youWin) {
-      alert(`${currentPlayer.getName()} wins!`)
-      break
+      if (currentPlayer == player1) {
+        return -1
+      }
+      else {return 1}
     }
-    // if (i == 7 && !(youWin) && !(gameBoard.checkNull())) {
-    //   alert(`{Tie! Nobody wins!}`)
-    // }
+  }
+  if ((player1.markedBoard + player2.markedBoard) == 9 && winner) {
+    return 0
   }
 }
+
 
 // Checks if input is aphanumeric.
 function isAlphaNumeric(str) {
@@ -160,4 +271,19 @@ function isAlphaNumeric(str) {
     }
   }
   return true;
+}
+
+// AI turn
+function AIturn() {
+  for (i = 0; i < gameBoard.length; i++) {
+    const grid = document.getElementById(`${i}`)
+    if(grid.textContent == "") {
+      grid.click()
+      break
+    }
+  }
+}
+// Minimax
+function minimax(board) {
+
 }
