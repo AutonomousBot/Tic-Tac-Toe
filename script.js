@@ -254,7 +254,7 @@ function checkWinner() {
       else {return 1}
     }
   }
-  if ((player1.markedBoard + player2.markedBoard) == 9 && winner) {
+  if ((player1.markedBoard + player2.markedBoard) == 9) {
     return 0
   }
 }
@@ -275,15 +275,70 @@ function isAlphaNumeric(str) {
 
 // AI turn
 function AIturn() {
+  const grid = document.getElementById(`${bestMove()}`)
+  grid.click()
+}
+
+
+// Minimax
+function bestMove() {
+  let bestScore = -Infinity
+  let bestMove;
   for (i = 0; i < gameBoard.length; i++) {
-    const grid = document.getElementById(`${i}`)
-    if(grid.textContent == "") {
-      grid.click()
-      break
+    // Empty grid.
+    if (gameBoard.board[i] == undefined) {
+      player2.markedBoard.push(`{i}`)
+      let score = minimax(false)
+      player2.markedBoard.pop()
+      if (score > bestScore) {
+        bestMove = `${i}`
+      }
     }
   }
+  return bestMove
 }
-// Minimax
-function minimax(board) {
 
+function minimax(isMaximizing) {
+  // Check if last move ends the game.
+  let results = checkWinner()
+  console.log(player2.markedBoard)
+  console.log(player1.markedBoard)
+  if (results != undefined) {
+    return results
+  }
+  if (isMaximizing) {
+    let bestScore = -Infinity
+    for (i = 0; i < gameBoard.length; i++) {
+      // Empty grid.
+      if (gameBoard.board[i] == undefined) {
+        player2.markedBoard.push(`${i}`)
+        gameBoard.board[i] = player2.getMark()
+        let score = minimax(false)
+        gameBoard.board[i] = undefined
+        player2.markedBoard.pop()
+        if (score > bestScore) {
+          bestScore = Math.max(score, bestScore)
+        }
+      }
+    }
+    return bestScore
+  }
+  else {
+    let bestScore = Infinity
+    for (i = 0; i < gameBoard.length; i++) {
+      // Empty grid.
+      if (gameBoard.board[i] == undefined) {
+        player1.markedBoard.push(`${i}`)
+        gameBoard.board[i] = player1.getMark()
+        let score = minimax(true)
+        gameBoard.board[i] = undefined
+        player1.markedBoard.pop()
+        bestScore = Math.min(score, bestScore)
+      }
+    }
+    return bestScore
+  }
 }
+
+// Things to do: remove markedboards. use board to make 2 arrays for each player in check winner. 
+// check player1, then player2 and return value
