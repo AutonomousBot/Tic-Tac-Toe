@@ -228,7 +228,7 @@ let turn = (() => {
      currentPlayer = player1 
     }
     DOM.textContent = `${currentPlayer.getName()}'s turn`
-    if (currentPlayer == player2) {
+    if (currentPlayer == player2 && AIonline) {
       AIturn();
     }
   }
