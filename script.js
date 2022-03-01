@@ -21,6 +21,8 @@ let gameBoard = (() => {
       const gridDOM = document.getElementById(`${i}`)
       gridDOM.addEventListener("click", addMark, false)
     }
+    // Removes player settings during match.
+    reset.playerSettings()
   }
   return {
     board,
@@ -43,6 +45,7 @@ let reset = (() => {
   const playerSettings = () => {
     // document.getElementById("1player").removeEventListener("click")
     document.getElementById("2players").removeEventListener("click", twoPlayerGame, false)
+    document.getElementById("1player").removeEventListener("click", soloGame, false)
   }
   // Resets players and turns.
   const players = () => {
@@ -56,8 +59,11 @@ let reset = (() => {
   const board = () => {
     gameBoard.board = []
     for (let i = 0; i < gameBoard.length; i++) {
-      document.getElementById(`${i}`).removeEventListener("click", addMark, false)
+      const grid = document.getElementById(`${i}`)
+      grid.removeEventListener("click", addMark, false)
+      grid.textContent = ""
     }
+    document.getElementById("playerTurn").textContent = ""
   }
 
   // Restores player settings.
@@ -93,7 +99,8 @@ let reset = (() => {
   return {
     playerSettings,
     restoreSettings,
-    grid
+    grid,
+    game,
   }
 })()
 
@@ -145,7 +152,6 @@ function soloGame() {
 function twoPlayerGame() {
   // Prompts for players' names and their marks.
   let player1Name = prompt("Enter player one's name (special characters excluded).")
-  console.log(player1Name)
   while (player1Name == "" || !isAlphaNumeric(player1Name)) {
     player1Name = prompt("Enter player one's name (special characters excluded).")
   }
@@ -175,6 +181,11 @@ function twoPlayerGame() {
   reset.playerSettings()
 }
 
+// Gets a random value of 1 or 2
+function randomValue() {
+  return Math.floor(Math.random() * 2) + 1
+}
+
 // Determines who plays first and turn order. Updates current player variable.
 let turn = (() => {
   const DOM = document.getElementById("playerTurn")
@@ -186,8 +197,7 @@ let turn = (() => {
         if (gameBoard.board.length === 0)
         {
           // Randomizes first player.
-          let first = Math.floor(Math.random() * 2) + 1;
-          if (first == 1) { currentPlayer = player1 } else { currentPlayer = player2 }
+          if (randomValue() == 1) { currentPlayer = player1 } else { currentPlayer = player2 }
           DOM.textContent = `${currentPlayer.getName()} will go first`
           if (gameBoard.AIonline && currentPlayer == player2) {
             AIturn();
@@ -213,16 +223,16 @@ let turn = (() => {
     }
     if (currentPlayer == player1) { 
       currentPlayer = player2 
-      if (gameBoard.AIonline) {
-        AIturn();
-      }
     } 
     else {
      currentPlayer = player1 
     }
     DOM.textContent = `${currentPlayer.getName()}'s turn`
+    if (currentPlayer == player2) {
+      AIturn();
+    }
   }
-  return {currentPlayer, displayTurn, current, DOM}
+  return {displayTurn, current, DOM}
 })()
 
 // 
@@ -243,20 +253,24 @@ function addMark() {
 
 // Check for winner or a tie.
 function checkWinner() {
-  for (let i = 0; i < 8; i++) {
-    const youWin = winningArrays[i].every(element => {
-      return currentPlayer.markedBoard.sort().includes(String(element));
-    })
-    if (youWin) {
-      if (currentPlayer == player1) {
-        return -1
-      }
-      else {return 1}
+  let player1Marks = gameBoard.board.map((grid, i) => grid === player1.getMark() ? i : '').filter(String)
+  let player2Marks = gameBoard.board.map((grid, i) => grid === player2.getMark() ? i : '').filter(String)
+  if ((player1Marks.length + player2Marks.length) >= 5) {
+    for (let i = 0; i < winningArrays.length; i++) {
+      const player1Win = winningArrays[i].every(element => {
+        return player1Marks.sort().includes(element);
+      })
+      const player2Win = winningArrays[i].every(element => {
+        return player2Marks.sort().includes(element);
+      })
+      if (player1Win) {return -1}
+      else if (player2Win) {return 1}
+    }
+    if ((player1Marks.length + player2Marks.length) == 9) {
+      return 0
     }
   }
-  if ((player1.markedBoard + player2.markedBoard) == 9) {
-    return 0
-  }
+  return
 }
 
 
@@ -284,13 +298,18 @@ function AIturn() {
 function bestMove() {
   let bestScore = -Infinity
   let bestMove;
-  for (i = 0; i < gameBoard.length; i++) {
+  for (let i = 0; i < gameBoard.length; i++) {
     // Empty grid.
     if (gameBoard.board[i] == undefined) {
-      player2.markedBoard.push(`{i}`)
+      gameBoard.board[i] = player2.getMark()
+
       let score = minimax(false)
-      player2.markedBoard.pop()
+      
+      // Removes mark after minimax evaluation.
+      gameBoard.board[i] = undefined
+      currentPlayer = player2
       if (score > bestScore) {
+        bestScore = score
         bestMove = `${i}`
       }
     }
@@ -301,21 +320,25 @@ function bestMove() {
 function minimax(isMaximizing) {
   // Check if last move ends the game.
   let results = checkWinner()
-  console.log(player2.markedBoard)
-  console.log(player1.markedBoard)
   if (results != undefined) {
     return results
   }
+  // Switch player for next minimax evaluation.
+  currentPlayer = (currentPlayer == player1)? player2 : player1
+
+  // Maximizing player turn.
   if (isMaximizing) {
     let bestScore = -Infinity
-    for (i = 0; i < gameBoard.length; i++) {
+    for (let i = 0; i < gameBoard.length; i++) {
       // Empty grid.
       if (gameBoard.board[i] == undefined) {
-        player2.markedBoard.push(`${i}`)
         gameBoard.board[i] = player2.getMark()
+
         let score = minimax(false)
+
+        // Removes mark after minimax evaluation.
         gameBoard.board[i] = undefined
-        player2.markedBoard.pop()
+
         if (score > bestScore) {
           bestScore = Math.max(score, bestScore)
         }
@@ -323,22 +346,22 @@ function minimax(isMaximizing) {
     }
     return bestScore
   }
+  // Minimizing player turn.
   else {
     let bestScore = Infinity
-    for (i = 0; i < gameBoard.length; i++) {
+    for (let i = 0; i < gameBoard.length; i++) {
       // Empty grid.
       if (gameBoard.board[i] == undefined) {
-        player1.markedBoard.push(`${i}`)
         gameBoard.board[i] = player1.getMark()
+
         let score = minimax(true)
+
+        // Removes mark after minimax evaluation.
         gameBoard.board[i] = undefined
-        player1.markedBoard.pop()
+
         bestScore = Math.min(score, bestScore)
       }
     }
     return bestScore
   }
 }
-
-// Things to do: remove markedboards. use board to make 2 arrays for each player in check winner. 
-// check player1, then player2 and return value
