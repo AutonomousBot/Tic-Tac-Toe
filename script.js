@@ -192,17 +192,11 @@ let turn = (() => {
   const displayTurn = () => {
     // Checks if player1 is registered.
     if (!(Object.keys(player1).length === 0)) {
-      for(let i = 0; i < gameBoard.length; i++) {
-        // Checks if board is empty.
-        if (gameBoard.board.length === 0)
-        {
-          // Randomizes first player.
-          if (randomValue() == 1) { currentPlayer = player1 } else { currentPlayer = player2 }
-          DOM.textContent = `${currentPlayer.getName()} will go first`
-          if (gameBoard.AIonline && currentPlayer == player2) {
-            AIturn();
-          }
-        }
+      // Randomizes first player.
+      currentPlayer = (randomValue() == 1)? player1 : player2;
+      DOM.textContent = `${currentPlayer.getName()} will go first`
+      if (gameBoard.AIonline && currentPlayer == player2) {
+        AIturn();
       }
     }
   }
@@ -228,7 +222,7 @@ let turn = (() => {
      currentPlayer = player1 
     }
     DOM.textContent = `${currentPlayer.getName()}'s turn`
-    if (currentPlayer == player2 && AIonline) {
+    if (currentPlayer == player2 && gameBoard.AIonline) {
       AIturn();
     }
   }
